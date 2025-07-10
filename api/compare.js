@@ -16,14 +16,8 @@ export default async function handler(req, res) {
     const $ = cheerio.load(response.data);
     const title = $('h1.product_title').text().trim();
 
-    // Updated: Get the price from product summary
-    let horekaPrice;
-    $('.summary .price .woocommerce-Price-amount').each((i, el) => {
-      const val = $(el).text().replace(/[^\d]/g, '');
-      if (val && val.length > 2) {
-        horekaPrice = parseInt(val, 10);
-      }
-    });
+    const priceText = $('.summary p.price span.woocommerce-Price-amount').first().text();
+    const horekaPrice = priceText ? parseInt(priceText.replace(/[^\d]/g, ''), 10) : null;
 
     if (!title || !horekaPrice) {
       console.error('Could not extract title or price.');
@@ -34,7 +28,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       title,
       horekaPrice,
-      flipkartPrice: null // flipkart disabled for now
+      flipkartPrice: null
     });
 
   } catch (err) {
@@ -42,5 +36,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 }
+
 
 
