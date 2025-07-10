@@ -8,38 +8,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Horeka URL' });
     }
 
-    // Scrape Horeka product page
-    const horekaRes = await axios.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
+      timeout: 5000,
     });
 
-    const $ = cheerio.load(horekaRes.data);
+    const $ = cheerio.load(response.data);
     const title = $('h1.product_title').text().trim();
     const priceText = $('.woocommerce-Price-amount').first().text();
-    const horekaPrice = parseInt(priceText.replace(/[^\d]/g, ''));
-
-    if (!title || !horekaPrice) {
-      return res.status(500).json({ error: 'Could not parse Horeka page' });
-    }
-
-    // Flipkart price (via search)
-    const flipUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(title)}`;
-    const flipRes = await axios.get(flipUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const $$ = cheerio.load(flipRes.data);
-    const flipPriceText = $$('div._30jeq3').first().text();
-    const flipkartPrice = flipPriceText ? parseInt(flipPriceText.replace(/[^\d]/g, '')) : null;
+    const horekaPrice = parseInt(priceText.replace(/[^\d]/g, ''), 10);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(200).json({
-      title,
-      horekaPrice,
-      flipkartPrice
+    return res.status(200).json({
+      title: title || 'Unknown',
+      horekaPrice: horekaPrice || 'N/A',
+      flipkartPrice: null // disabled for now
     });
 
-  } catch (error) {
-    console.error('❌ Serverless function crashed:', error.message);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (err) {
+    console.error('ERROR:', err.message);
+    return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 }
+
