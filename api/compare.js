@@ -9,27 +9,38 @@ export default async function handler(req, res) {
     }
 
     const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      },
-      timeout: 5000,
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      timeout: 7000,
     });
 
     const $ = cheerio.load(response.data);
     const title = $('h1.product_title').text().trim();
-    const priceText = $('.woocommerce-Price-amount').first().text();
-    const horekaPrice = parseInt(priceText.replace(/[^\d]/g, ''), 10);
+
+    // Updated: Get the price from product summary
+    let horekaPrice;
+    $('.summary .price .woocommerce-Price-amount').each((i, el) => {
+      const val = $(el).text().replace(/[^\d]/g, '');
+      if (val && val.length > 2) {
+        horekaPrice = parseInt(val, 10);
+      }
+    });
+
+    if (!title || !horekaPrice) {
+      console.error('Could not extract title or price.');
+      return res.status(500).json({ error: 'Could not extract product details' });
+    }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
-      title: title || 'Unknown',
-      horekaPrice: horekaPrice || 'N/A',
-      flipkartPrice: null // disabled for now
+      title,
+      horekaPrice,
+      flipkartPrice: null // flipkart disabled for now
     });
 
   } catch (err) {
-    console.error('ERROR:', err.message);
+    console.error('Server error:', err.message);
     return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 }
+
 
